@@ -1,1128 +1,878 @@
+-- ═══════════════════════════════════════════
+--  🌿 MILKWEED HUB | Ride a Pet | v14 🌿
+-- ═══════════════════════════════════════════
+if not game:IsLoaded() then game.Loaded:Wait() end
 local Players = game:GetService("Players")
-local UIS = game:GetService("UserInputService")
-local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
-local LocalPlayer = Players.LocalPlayer
+local TweenService = game:GetService("TweenService")
+local RS = game:GetService("ReplicatedStorage")
+local lp = Players.LocalPlayer
 
-local autoSteal, espEnabled, eggCache, espObjects, lastScan, beam, att0, att1, returnCFrame, stealing =
-    false, false, {}, {}, 0, nil, nil, nil, nil, false
-local infJump, noClip, speedBoost = false, false, false
-local speedValue, baseWalkSpeed = 16, 16
+-- ═══════════════════════════════════════════
+--  LOADING SCREEN
+-- ═══════════════════════════════════════════
+local loadingGui = Instance.new("ScreenGui")
+loadingGui.Name = "MilkweedLoading"
+loadingGui.ResetOnSpawn = false
+loadingGui.IgnoreGuiInset = true
+loadingGui.DisplayOrder = 999
+loadingGui.Parent = (gethui and gethui()) or game:GetService("CoreGui")
 
--- ===================== INTELLIGENT EGG DATABASE (Ride A Pet — name → Luck + Rarity) =====================
--- Research-backed: Luck values & rarities from current game data (Sep 2026)
-local EGG_DB = {
-    -- Common
-    ["white egg"]     = {luck=1,          rank=1, label="Common",   color=Color3.fromRGB(180,180,180)},
-    ["brown egg"]     = {luck=5,          rank=1, label="Common",   color=Color3.fromRGB(180,180,180)},
-    -- Rare
-    ["cracked egg"]   = {luck=30,         rank=3, label="Rare",     color=Color3.fromRGB(60,140,255)},
-    ["easter egg"]    = {luck=50,         rank=3, label="Rare",     color=Color3.fromRGB(60,140,255)},
-    ["stone egg"]     = {luck=100,        rank=3, label="Rare",     color=Color3.fromRGB(60,140,255)},
-    ["leaf egg"]      = {luck=200,        rank=3, label="Rare",     color=Color3.fromRGB(60,140,255)},
-    -- Epic
-    ["mushroom egg"]  = {luck=500,        rank=4, label="Epic",     color=Color3.fromRGB(160,70,255)},
-    ["flower egg"]    = {luck=750,        rank=4, label="Epic",     color=Color3.fromRGB(160,70,255)},
-    ["slime egg"]     = {luck=1000,       rank=4, label="Epic",     color=Color3.fromRGB(160,70,255)},
-    ["ice egg"]       = {luck=3000,       rank=4, label="Epic",     color=Color3.fromRGB(160,70,255)},
-    -- Legendary
-    ["glass egg"]     = {luck=10000,      rank=5, label="Legendary",color=Color3.fromRGB(255,140,0)},
-    ["golden egg"]    = {luck=30000,      rank=5, label="Legendary",color=Color3.fromRGB(255,140,0)},
-    -- Mythic
-    ["diamond egg"]   = {luck=90000,      rank=6, label="Mythic",   color=Color3.fromRGB(255,55,55)},
-    ["crystal egg"]   = {luck=150000,     rank=6, label="Mythic",   color=Color3.fromRGB(255,55,55)},
-    ["skull egg"]     = {luck=250000,     rank=6, label="Mythic",   color=Color3.fromRGB(255,55,55)},
-    ["asteroid egg"]  = {luck=500000,     rank=6, label="Mythic",   color=Color3.fromRGB(255,55,55)},
-    ["asterold egg"]  = {luck=500000,     rank=6, label="Mythic",   color=Color3.fromRGB(255,55,55)},
-    ["dominus egg"]   = {luck=700000,     rank=6, label="Mythic",   color=Color3.fromRGB(255,55,55)},
-    ["flaming egg"]   = {luck=1000000,    rank=6, label="Mythic",   color=Color3.fromRGB(255,55,55)},
-    ["sinister egg"]  = {luck=3000000,    rank=6, label="Mythic",   color=Color3.fromRGB(255,55,55)},
-    ["soul egg"]      = {luck=7000000,    rank=6, label="Mythic",   color=Color3.fromRGB(255,55,55)},
-    ["tidal egg"]     = {luck=8000000,    rank=6, label="Mythic",   color=Color3.fromRGB(255,55,55)},
-    -- Divine
-    ["aurora egg"]    = {luck=300000000,  rank=7, label="Divine",   color=Color3.fromRGB(255,215,0)},
-    ["galaxy egg"]    = {luck=1500000000, rank=7, label="Divine",   color=Color3.fromRGB(255,215,0)},
-    ["bloom egg"]     = {luck=2000000000, rank=7, label="Divine",   color=Color3.fromRGB(255,215,0)},
-    -- Ethereal (TOP priority)
-    ["blackhole egg"] = {luck=100000000000, rank=8, label="Ethereal", color=Color3.fromRGB(120,220,255)},
-    ["black hole egg"]= {luck=100000000000, rank=8, label="Ethereal", color=Color3.fromRGB(120,220,255)},
-    ["solaris egg"]   = {luck=300000000000, rank=8, label="Ethereal", color=Color3.fromRGB(120,220,255)},
-    ["cherub egg"]    = {luck=1000000000000,rank=8, label="Ethereal", color=Color3.fromRGB(120,220,255)},
-    ["volcanic egg"]  = {luck=2500000000000,rank=8, label="Ethereal", color=Color3.fromRGB(120,220,255)},
+local bg = Instance.new("Frame", loadingGui)
+bg.Size = UDim2.new(1, 0, 1, 0)
+bg.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+bg.BackgroundTransparency = 0.15
+bg.BorderSizePixel = 0
+
+local bgGrad = Instance.new("UIGradient", bg)
+bgGrad.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(2, 14, 6)),
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(4, 24, 10)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(2, 14, 6)),
+})
+bgGrad.Rotation = 45
+
+local card = Instance.new("Frame", bg)
+card.Size = UDim2.new(0, 320, 0, 200)
+card.Position = UDim2.new(0.5, -160, 0.5, -100)
+card.BackgroundColor3 = Color3.fromRGB(5, 18, 8)
+card.BackgroundTransparency = 0.15
+card.BorderSizePixel = 0
+Instance.new("UICorner", card).CornerRadius = UDim.new(0, 16)
+
+local cardStroke = Instance.new("UIStroke", card)
+cardStroke.Color = Color3.fromRGB(60, 200, 100)
+cardStroke.Thickness = 2
+cardStroke.Transparency = 0.2
+
+task.spawn(function()
+    while card.Parent do
+        TweenService:Create(cardStroke, TweenInfo.new(1, Enum.EasingStyle.Sine), {Transparency = 0.6}):Play()
+        task.wait(1)
+        TweenService:Create(cardStroke, TweenInfo.new(1, Enum.EasingStyle.Sine), {Transparency = 0.2}):Play()
+        task.wait(1)
+    end
+end)
+
+local logo = Instance.new("TextLabel", card)
+logo.Size = UDim2.new(1, 0, 0, 60)
+logo.Position = UDim2.new(0, 0, 0, 25)
+logo.BackgroundTransparency = 1
+logo.Text = "✦ MILKWEED HUB ✦"
+logo.TextColor3 = Color3.fromRGB(100, 230, 140)
+logo.Font = Enum.Font.GothamBlack
+logo.TextSize = 26
+logo.TextStrokeTransparency = 0.5
+logo.TextStrokeColor3 = Color3.fromRGB(10, 70, 25)
+
+local sub = Instance.new("TextLabel", card)
+sub.Size = UDim2.new(1, 0, 0, 20)
+sub.Position = UDim2.new(0, 0, 0, 82)
+sub.BackgroundTransparency = 1
+sub.Text = "Loading your experience..."
+sub.TextColor3 = Color3.fromRGB(180, 180, 220)
+sub.Font = Enum.Font.Gotham
+sub.TextSize = 12
+
+local track = Instance.new("Frame", card)
+track.Size = UDim2.new(1, -60, 0, 10)
+track.Position = UDim2.new(0, 30, 0, 125)
+track.BackgroundColor3 = Color3.fromRGB(10, 28, 14)
+track.BorderSizePixel = 0
+Instance.new("UICorner", track).CornerRadius = UDim.new(1, 0)
+
+local fill = Instance.new("Frame", track)
+fill.Size = UDim2.new(0, 0, 1, 0)
+fill.BackgroundColor3 = Color3.fromRGB(60, 200, 100)
+fill.BorderSizePixel = 0
+Instance.new("UICorner", fill).CornerRadius = UDim.new(1, 0)
+
+local fillGrad = Instance.new("UIGradient", fill)
+fillGrad.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(30, 140, 65)),
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(90, 210, 130)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(30, 140, 65)),
+})
+
+local pct = Instance.new("TextLabel", card)
+pct.Size = UDim2.new(1, 0, 0, 20)
+pct.Position = UDim2.new(0, 0, 0, 145)
+pct.BackgroundTransparency = 1
+pct.Text = "0%"
+pct.TextColor3 = Color3.fromRGB(200, 240, 210)
+pct.Font = Enum.Font.GothamBold
+pct.TextSize = 13
+
+task.spawn(function()
+    while fill.Parent do
+        fillGrad.Offset = Vector2.new(-1, 0)
+        TweenService:Create(fillGrad, TweenInfo.new(1.2, Enum.EasingStyle.Linear), {Offset = Vector2.new(1, 0)}):Play()
+        task.wait(1.4)
+    end
+end)
+
+local messages = {
+    "Initializing core...",
+    "Connecting to server...",
+    "Loading modules...",
+    "Scanning eggs...",
+    "Building ESP cache...",
+    "Optimizing performance...",
+    "Almost ready...",
+    "Welcome to Milkweed Hub! 🌿"
 }
 
-local RARITY_TIERS = {
-    { rank=8, label="Ethereal", color=Color3.fromRGB(120,220,255) },
-    { rank=7, label="Divine",   color=Color3.fromRGB(255,215,  0) },
-    { rank=6, label="Mythic",   color=Color3.fromRGB(255, 55, 55) },
-    { rank=5, label="Legendary",color=Color3.fromRGB(255,140,  0) },
-    { rank=4, label="Epic",     color=Color3.fromRGB(160, 70,255) },
-    { rank=3, label="Rare",     color=Color3.fromRGB( 60,140,255) },
-    { rank=2, label="Uncommon", color=Color3.fromRGB( 80,200, 80) },
-    { rank=1, label="Common",   color=Color3.fromRGB(180,180,180) },
-}
+local statusLine = Instance.new("TextLabel", card)
+statusLine.Size = UDim2.new(1, 0, 0, 16)
+statusLine.Position = UDim2.new(0, 0, 0, 168)
+statusLine.BackgroundTransparency = 1
+statusLine.Text = messages[1]
+statusLine.TextColor3 = Color3.fromRGB(100, 180, 120)
+statusLine.Font = Enum.Font.Code
+statusLine.TextSize = 11
 
-local TIERS_ASC = {}
-for i = #RARITY_TIERS, 1, -1 do TIERS_ASC[#TIERS_ASC+1] = RARITY_TIERS[i] end
+card.Position = UDim2.new(0.5, -160, 0.5, -80)
+card.BackgroundTransparency = 1
+TweenService:Create(card, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+    Position = UDim2.new(0.5, -160, 0.5, -100),
+    BackgroundTransparency = 0.15
+}):Play()
+task.wait(0.4)
 
-local function norm(s)
-    return tostring(s or ""):lower()
-        :gsub("á","a"):gsub("é","e"):gsub("í","i"):gsub("ó","o"):gsub("ú","u"):gsub("ñ","n")
-        :gsub("%s+"," ")
+local duration = 2.6
+local steps = 100
+for i = 0, steps do
+    local p = i / steps
+    fill.Size = UDim2.new(p, 0, 1, 0)
+    pct.Text = math.floor(p * 100) .. "%"
+    local idx = math.clamp(math.floor(p * #messages) + 1, 1, #messages)
+    statusLine.Text = messages[idx]
+    task.wait(duration / steps)
 end
 
-local function fmtLuck(v)
-    if not v or v <= 0 then return "—" end
-    if v >= 1e12 then return string.format("%.1fT", v/1e12)
-    elseif v >= 1e9 then return string.format("%.1fB", v/1e9)
-    elseif v >= 1e6 then return string.format("%.1fM", v/1e6)
-    elseif v >= 1e3 then return string.format("%.0fK", v/1e3)
-    else return tostring(math.floor(v)) end
+task.wait(0.3)
+local outTween = TweenService:Create(card, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
+    Position = UDim2.new(0.5, -160, 0.5, -80),
+    BackgroundTransparency = 1
+})
+outTween:Play()
+TweenService:Create(bg, TweenInfo.new(0.5), {BackgroundTransparency = 1}):Play()
+outTween.Completed:Wait()
+loadingGui:Destroy()
+
+-- ═══════════════════════════════════════════
+--  MAIN SCRIPT
+-- ═══════════════════════════════════════════
+for _,v in ipairs(((gethui and gethui()) or game:GetService("CoreGui")):GetDescendants()) do
+    if v.Name == "MilkweedHub" then v:Destroy() end
 end
 
--- Intelligent name + rarity detection from model
-local function detectEgg(model)
-    local bag = {}
-    local function push(s)
-        if s and s ~= "" then bag[#bag+1] = norm(tostring(s)) end
-    end
-    push(model.Name)
-    for _, d in ipairs(model:GetDescendants()) do
-        if d:IsA("TextLabel") or d:IsA("TextBox") then push(d.Text)
-        elseif d:IsA("StringValue") then push(d.Value) end
-        if d:IsA("BasePart") then
-            for _, g in ipairs(d:GetChildren()) do
-                if g:IsA("BillboardGui") or g:IsA("SurfaceGui") then
-                    for _, l in ipairs(g:GetDescendants()) do
-                        if l:IsA("TextLabel") or l:IsA("TextBox") then push(l.Text) end
-                    end
-                end
-            end
-        end
-    end
-    pcall(function() for _, v2 in pairs(model:GetAttributes()) do push(tostring(v2)) end end)
+local parent = (gethui and gethui()) or game:GetService("CoreGui")
+local gui = Instance.new("ScreenGui")
+gui.Name = "MilkweedHub"
+gui.ResetOnSpawn = false
+gui.IgnoreGuiInset = true
+gui.Parent = parent
 
-    local combined = table.concat(bag, " ")
-    -- Prefer exact known egg name match
-    for name, data in pairs(EGG_DB) do
-        if combined:find(name, 1, true) then
-            return {
-                name = name:gsub("(%a)([%w_']*)", function(f,r) return f:upper()..r end),
-                luck = data.luck,
-                rarityRank = data.rank,
-                rarityLabel = data.label,
-                rarityColor = data.color,
-            }
-        end
+local main = Instance.new("Frame", gui)
+main.Size = UDim2.new(0, 260, 0, 0)
+main.Position = UDim2.new(0, 20, 0.1, 0)
+main.BackgroundColor3 = Color3.fromRGB(6, 14, 8)
+main.BorderSizePixel = 0
+main.Active = true
+main.Draggable = true
+main.ClipsDescendants = true
+Instance.new("UICorner", main).CornerRadius = UDim.new(0, 14)
+
+local stroke = Instance.new("UIStroke", main)
+stroke.Color = Color3.fromRGB(45, 170, 80)
+stroke.Thickness = 1.5
+stroke.Transparency = 0.3
+
+local header = Instance.new("Frame", main)
+header.Size = UDim2.new(1, 0, 0, 42)
+header.BackgroundColor3 = Color3.fromRGB(8, 22, 10)
+header.BorderSizePixel = 0
+Instance.new("UICorner", header).CornerRadius = UDim.new(0, 14)
+
+local title = Instance.new("TextLabel", header)
+title.Size = UDim2.new(1, -10, 1, 0)
+title.Position = UDim2.new(0, 10, 0, 0)
+title.BackgroundTransparency = 1
+title.Text = "✦ MILKWEED HUB ✦"
+title.TextColor3 = Color3.new(1,1,1)
+title.Font = Enum.Font.GothamBlack
+title.TextSize = 15
+title.TextXAlignment = Enum.TextXAlignment.Left
+
+local pulseDot = Instance.new("Frame", header)
+pulseDot.Size = UDim2.new(0, 8, 0, 8)
+pulseDot.Position = UDim2.new(1, -20, 0.5, -4)
+pulseDot.BackgroundColor3 = Color3.fromRGB(120, 255, 120)
+pulseDot.BorderSizePixel = 0
+Instance.new("UICorner", pulseDot).CornerRadius = UDim.new(1, 0)
+
+task.spawn(function()
+    while pulseDot.Parent do
+        TweenService:Create(pulseDot, TweenInfo.new(0.8), {BackgroundTransparency = 0.6}):Play()
+        task.wait(0.8)
+        TweenService:Create(pulseDot, TweenInfo.new(0.8), {BackgroundTransparency = 0}):Play()
+        task.wait(0.8)
     end
-    -- Fallback: rarity keyword only
-    for _, tier in ipairs(RARITY_TIERS) do
-        if combined:find(norm(tier.label), 1, true) then
-            return {
-                name = model.Name,
-                luck = 0,
-                rarityRank = tier.rank,
-                rarityLabel = tier.label,
-                rarityColor = tier.color,
-            }
-        end
-    end
-    return {
-        name = model.Name,
-        luck = 0,
-        rarityRank = 1,
-        rarityLabel = "Common",
-        rarityColor = Color3.fromRGB(180,180,180),
-    }
+end)
+
+local status = Instance.new("TextLabel", main)
+status.Size = UDim2.new(1, -20, 0, 22)
+status.Position = UDim2.new(0, 10, 0, 50)
+status.BackgroundColor3 = Color3.fromRGB(8, 16, 10)
+status.Text = "● Initializing..."
+status.TextColor3 = Color3.fromRGB(170,170,190)
+status.Font = Enum.Font.Gotham
+status.TextSize = 11
+status.TextXAlignment = Enum.TextXAlignment.Left
+Instance.new("UICorner", status).CornerRadius = UDim.new(0, 6)
+local sp = Instance.new("UIPadding", status); sp.PaddingLeft = UDim.new(0, 8)
+
+local eggList = Instance.new("TextLabel", main)
+eggList.Size = UDim2.new(1, -20, 0, 56)
+eggList.Position = UDim2.new(0, 10, 0, 76)
+eggList.BackgroundColor3 = Color3.fromRGB(6, 14, 8)
+eggList.Text = "● Scanning..."
+eggList.TextColor3 = Color3.fromRGB(140,220,255)
+eggList.Font = Enum.Font.Code
+eggList.TextSize = 10
+eggList.TextXAlignment = Enum.TextXAlignment.Left
+eggList.TextYAlignment = Enum.TextYAlignment.Top
+eggList.TextWrapped = true
+Instance.new("UICorner", eggList).CornerRadius = UDim.new(0, 6)
+local ep2 = Instance.new("UIPadding", eggList); ep2.PaddingLeft = UDim.new(0, 6); ep2.PaddingTop = UDim.new(0, 4)
+
+local function makeBtn(text, y, bg, sc)
+    local b = Instance.new("TextButton", main)
+    b.Size = UDim2.new(1, -20, 0, 42)
+    b.Position = UDim2.new(0, 10, 0, y)
+    b.BackgroundColor3 = bg
+    b.Text = text
+    b.TextColor3 = Color3.new(1,1,1)
+    b.Font = Enum.Font.GothamBold
+    b.TextSize = 13
+    b.AutoButtonColor = false
+    b.Active = true
+    Instance.new("UICorner", b).CornerRadius = UDim.new(0, 10)
+    local s = Instance.new("UIStroke", b)
+    s.Color = sc; s.Thickness = 1.5; s.Transparency = 0.2
+    b.MouseEnter:Connect(function() TweenService:Create(s, TweenInfo.new(0.2), {Thickness = 2.5, Transparency = 0}):Play() end)
+    b.MouseLeave:Connect(function() TweenService:Create(s, TweenInfo.new(0.2), {Thickness = 1.5, Transparency = 0.2}):Play() end)
+    return b, s
 end
 
-local function getRoot() local c=LocalPlayer.Character; return c and c:FindFirstChild("HumanoidRootPart") end
-local function getHum()  local c=LocalPlayer.Character; return c and c:FindFirstChildOfClass("Humanoid") end
+local espFolder = Instance.new("Folder", gui)
+espFolder.Name = "MilkweedESP"
+local espEggFolder = Instance.new("Folder", espFolder); espEggFolder.Name = "Eggs"
+local espEggOn = true
 
-local function zeroVel(p)
-    if not p then return end
-    pcall(function()
-        p.AssemblyLinearVelocity = Vector3.zero; p.AssemblyAngularVelocity = Vector3.zero
-        p.Velocity = Vector3.zero;               p.RotVelocity = Vector3.zero
-    end)
-end
+local btn, btnStroke            = makeBtn("⚡ STEAL 1B+", 140, Color3.fromRGB(15, 55, 25), Color3.fromRGB(60, 190, 90))
+local hatchBtn, hatchStroke     = makeBtn("🥚 AUTO HATCH", 186, Color3.fromRGB(20,60,80), Color3.fromRGB(60,200,220))
+local buyBtn, buyStroke         = makeBtn("💰 AUTO BUY HATCH LUCK", 232, Color3.fromRGB(80,60,10), Color3.fromRGB(255,200,60))
+local espEggBtn, espEggStroke   = makeBtn("👁 EGG ESP: ON", 278, Color3.fromRGB(20,120,40), Color3.fromRGB(80,255,120))
 
-local function findBase()
-    local plots = workspace:FindFirstChild("Plots")
-    if plots then
-        for _, plot in ipairs(plots:GetChildren()) do
-            local own = (plot:FindFirstChild("Data") or plot):FindFirstChild("Owner")
-            if own and (own.Value==LocalPlayer or tostring(own.Value)==tostring(LocalPlayer.UserId) or tostring(own.Value)==LocalPlayer.Name) then
-                local b = plot:FindFirstChild("Baseplate") or plot:FindFirstChildWhichIsA("BasePart")
-                if b then return CFrame.new(b.Position+Vector3.new(0,5,0)) end
-            end
-            if norm(plot.Name)==norm(LocalPlayer.Name) or norm(plot.Name)==norm(LocalPlayer.DisplayName) then
-                local b = plot:FindFirstChild("Baseplate") or plot:FindFirstChildWhichIsA("BasePart")
-                if b then return CFrame.new(b.Position+Vector3.new(0,5,0)) end
-            end
-        end
-    end
-    local d = workspace:FindFirstChild(LocalPlayer.Name) or workspace:FindFirstChild(LocalPlayer.DisplayName)
-    if d then
-        local p = d:FindFirstChildWhichIsA("BasePart")
-        if p then return CFrame.new(p.Position+Vector3.new(0,5,0)) end
-    end
-    for _, fn in ipairs({"Plot","Bases","Base","Players","PlayerPlots","Ranches"}) do
-        local f = workspace:FindFirstChild(fn)
-        if f then
-            for _, ch in ipairs(f:GetChildren()) do
-                if norm(ch.Name)==norm(LocalPlayer.Name) or norm(ch.Name)==norm(LocalPlayer.DisplayName) then
-                    local p = ch:FindFirstChildWhichIsA("BasePart")
-                    if p then return CFrame.new(p.Position+Vector3.new(0,5,0)) end
-                end
-            end
-        end
-    end
-end
+-- ============ AUTO-DETECT PLOT ============
+local ranchPos = nil
 
--- ===================== EGG SCANNER — fixed ownership + prompt validity =====================
-local function isOwned(egg)
-    local check = egg
-    while check and check ~= workspace do
-        local cn = norm(check.Name)
-        if cn:find("rancho") or cn:find("ranch") or cn:find("plot") or cn:find("farm") or cn:find("base") then
-            return true
-        end
-        for _, plr in ipairs(Players:GetPlayers()) do
-            if cn == norm(plr.Name) or cn == norm(plr.DisplayName) then
-                return true
-            end
-        end
-        -- also check Owner values
-        local own = check:FindFirstChild("Owner") or (check:FindFirstChild("Data") and check.Data:FindFirstChild("Owner"))
-        if own then
-            local v = own.Value
-            if v == LocalPlayer or tostring(v) == tostring(LocalPlayer.UserId) or tostring(v) == LocalPlayer.Name then
-                return true
-            end
-            for _, plr in ipairs(Players:GetPlayers()) do
-                if v == plr or tostring(v) == tostring(plr.UserId) or tostring(v) == plr.Name then
-                    return true
-                end
-            end
-        end
-        check = check.Parent
+local function matchesMe(v)
+    local un = lp.Name; local uid = tostring(lp.UserId)
+    if v.Name:find(un, 1, true) then return true end
+    if v.Name == uid then return true end
+    for _, val in pairs(v:GetAttributes()) do
+        local s = tostring(val)
+        if s == un or s == uid then return true end
+    end
+    for _,d in ipairs(v:GetDescendants()) do
+        if d:IsA("StringValue") and (d.Value == un or d.Value == uid) then return true end
+        if d:IsA("IntValue") and tostring(d.Value) == uid then return true end
+        if d:IsA("ObjectValue") and d.Value == lp then return true end
     end
     return false
 end
 
-local function scanEggs()
-    local results, seen = {}, {}
-    for _, obj in ipairs(workspace:GetDescendants()) do
-        if (obj:IsA("ProximityPrompt") or obj:IsA("ClickDetector")) and obj.Parent then
-            local egg, parent = nil, obj.Parent
-            while parent and parent ~= workspace do
-                local n = norm(parent.Name)
-                if (parent:IsA("Model") or parent:IsA("BasePart")) and
-                   (n:find("huevo") or n:find("egg")) and
-                   not (n:find("tracker") or n:find("canasta") or n:find("tool") or n:find("guia") or n:find("guide") or n:find("radar")) then
-                    egg = parent
-                    break
-                end
-                parent = parent.Parent
-            end
-            if egg and not seen[egg] and not isOwned(egg) then
-                seen[egg] = true
-                local info = detectEgg(egg)
-                table.insert(results, {
-                    model = egg,
-                    prompt = obj,
-                    name = info.name,
-                    luck = info.luck,
-                    rarityRank = info.rarityRank,
-                    rarityLabel = info.rarityLabel,
-                    rarityColor = info.rarityColor,
-                })
+local function autoLockRanch()
+    local plots = workspace:FindFirstChild("Plots")
+    if not plots then return false end
+    for _,plot in ipairs(plots:GetChildren()) do
+        if matchesMe(plot) then
+            local bp = plot:FindFirstChild("Baseplate") or plot:FindFirstChildWhichIsA("BasePart", true)
+            if bp then
+                ranchPos = bp.CFrame + Vector3.new(0, bp.Size.Y/2 + 4, 0)
+                return true
             end
         end
     end
-    -- Primary sort: highest rarity rank, then highest luck
-    table.sort(results, function(a,b)
-        if a.rarityRank ~= b.rarityRank then return a.rarityRank > b.rarityRank end
-        return (a.luck or 0) > (b.luck or 0)
-    end)
-    return results, results
+    return false
 end
 
-local eggByVal, eggByRar = {}, {}
-
-local function getTargetPart(e)
-    if not e or not e.prompt or not e.prompt.Parent then return nil end
-    local p = e.prompt.Parent
-    if p:IsA("Attachment") then p = p.Parent end
-    if p and p:IsA("BasePart") then return p end
-    if e.model then
-        if e.model:IsA("BasePart") then return e.model end
-        return e.model:FindFirstChildWhichIsA("BasePart", true)
+task.spawn(function()
+    if not lp.Character then lp.CharacterAdded:Wait() end
+    for i = 1, 60 do
+        if autoLockRanch() then status.Text = "● Plot found ✓"; break end
+        task.wait(0.5)
     end
-    return nil
+end)
+
+-- ============ VALUE PARSER ============
+local MIN_VALUE = 1_000_000_000
+
+local function parseValue(t)
+    if not t then return 0 end
+    t = tostring(t):upper():gsub("%s",""):gsub(",","")
+    local num, suf = t:match("([%d%.]+)([KMBT]?)")
+    if not num then return 0 end
+    local n = tonumber(num) or 0
+    if suf == "K" then return n*1e3 end
+    if suf == "M" then return n*1e6 end
+    if suf == "B" then return n*1e9 end
+    if suf == "T" then return n*1e12 end
+    return n
 end
 
-local function clearBeam()
-    if beam then pcall(function() beam:Destroy() end) beam = nil end
-    if att0 then pcall(function() att0:Destroy() end) att0 = nil end
-    if att1 then pcall(function() att1:Destroy() end) att1 = nil end
+-- ============ READ LUCK ============
+local function readEggLuck(egg)
+    if not egg or not egg.Parent then return "?" end
+    local el = egg:FindFirstChild("EggLuck", true)
+    if el then
+        local l = el:FindFirstChild("Luck")
+        if l and l:IsA("TextLabel") and l.Text ~= "" then return l.Text end
+        for _,c in ipairs(el:GetDescendants()) do
+            if c:IsA("TextLabel") and c.Text and c.Text ~= "" then return c.Text end
+        end
+    end
+    local ok, v = pcall(function() return egg:GetAttribute("Luck") end)
+    if ok and v then return tostring(v) end
+    return "?"
 end
 
-local function makeBeam(target)
-    clearBeam()
-    local r = getRoot()
-    if not r or not target or not target.Parent then return end
-    att0 = Instance.new("Attachment")
-    att0.Parent = r
-    att1 = Instance.new("Attachment")
-    att1.Parent = target
-    beam = Instance.new("Beam")
-    beam.Attachment0 = att0
-    beam.Attachment1 = att1
-    beam.Color = ColorSequence.new(Color3.fromRGB(0,200,255))
-    beam.Width0 = 0.12
-    beam.Width1 = 0.12
-    beam.FaceCamera = true
-    beam.LightEmission = 0.6
-    beam.Parent = r
+-- ============ RARITY (cached) ============
+local RS_RARITY = {}
+local RS_SCANNED = false
+
+local function buildRSCache()
+    RS_RARITY = {}
+    local folders = {"EggConfig","Eggs","GameData","EggData","Config","EggInfo"}
+    for _,fn in ipairs(folders) do
+        local f = RS:FindFirstChild(fn, true)
+        if f then
+            for _,eggT in ipairs(f:GetChildren()) do
+                local rar = nil
+                for _,a in ipairs({"Rarity","Tier","RarityName","TierName"}) do
+                    local ok, v = pcall(function() return eggT:GetAttribute(a) end)
+                    if ok and v then rar = tostring(v); break end
+                end
+                if not rar then
+                    for _,c in ipairs(eggT:GetChildren()) do
+                        local n = c.Name:lower()
+                        if (c:IsA("StringValue") and (n:find("rar") or n:find("tier"))) then
+                            rar = c.Value; break
+                        end
+                    end
+                end
+                if rar then RS_RARITY[eggT.Name] = rar end
+            end
+            break
+        end
+    end
+    RS_SCANNED = true
 end
 
-local function tp(cf)
-    local r = getRoot()
-    local h = getHum()
-    if not r or not h or h.Health <= 0 then return false end
-    r.CFrame = cf
-    zeroVel(r)
+local TIER_LIST = {"titanic","huge","secret","mythic","divine","godly","god","legendary","epic","rare","uncommon","common"}
+
+local function titleCase(s)
+    s = tostring(s)
+    return s:sub(1,1):upper()..s:sub(2):lower()
+end
+
+local rarityCache = {}
+
+local function readEggRarity(egg)
+    if not egg or not egg.Parent then return "?" end
+    local cached = rarityCache[egg]
+    if cached then return cached end
+    if not RS_SCANNED then buildRSCache() end
+
+    local result = nil
+
+    for _,a in ipairs({"Rarity","Tier","EggRarity","RarityName","RarityLevel","TierName"}) do
+        local ok, v = pcall(function() return egg:GetAttribute(a) end)
+        if ok and v then result = titleCase(tostring(v)); break end
+    end
+
+    if not result then
+        for _,d in ipairs(egg:GetChildren()) do
+            if d:IsA("StringValue") then
+                local n = d.Name:lower()
+                if n:find("rar") or n:find("tier") then result = titleCase(d.Value); break end
+            end
+        end
+    end
+
+    if not result then
+        local r = RS_RARITY[egg.Name]
+        if r then result = titleCase(r) end
+    end
+
+    if not result then
+        local n = (egg.Name or ""):lower()
+        for _,t in ipairs(TIER_LIST) do
+            if n:find(t) then result = titleCase(t); break end
+        end
+    end
+
+    if not result then
+        local luck = parseValue(readEggLuck(egg))
+        if luck >= 1e12 then result = "Titanic"
+        elseif luck >= 1e9 then result = "Huge"
+        elseif luck >= 1e6 then result = "Mythic"
+        elseif luck >= 1e3 then result = "Legendary"
+        elseif luck >= 100 then result = "Epic"
+        elseif luck >= 10 then result = "Rare"
+        elseif luck >= 1 then result = "Uncommon"
+        else result = "Common" end
+    end
+
+    rarityCache[egg] = result
+    return result
+end
+
+local function rarityColor(r)
+    r = (tostring(r) or ""):lower()
+    if r:find("titanic") then return Color3.fromRGB(255,60,60) end
+    if r:find("huge") then return Color3.fromRGB(255,150,60) end
+    if r:find("mythic") or r:find("secret") then return Color3.fromRGB(200,80,255) end
+    if r:find("divine") or r:find("god") then return Color3.fromRGB(255,220,80) end
+    if r:find("legend") then return Color3.fromRGB(255,180,60) end
+    if r:find("epic") then return Color3.fromRGB(160,80,255) end
+    if r:find("rare") then return Color3.fromRGB(80,150,255) end
+    if r:find("uncommon") then return Color3.fromRGB(120,255,120) end
+    return Color3.fromRGB(200,200,220)
+end
+
+local function fmt(n)
+    if n >= 1e12 then return string.format("%.2fT", n/1e12) end
+    if n >= 1e9  then return string.format("%.2fB", n/1e9) end
+    if n >= 1e6  then return string.format("%.2fM", n/1e6) end
+    if n >= 1e3  then return string.format("%.2fK", n/1e3) end
+    return tostring(n)
+end
+
+local function getPos(o)
+    if o:IsA("BasePart") then return o.Position end
+    if o:IsA("Model") and o.PrimaryPart then return o.PrimaryPart.Position end
+    local p = o:FindFirstChildWhichIsA("BasePart", true)
+    return p and p.Position
+end
+
+-- ============ FAST EGG DETECTOR ============
+local EGG_KEYWORDS = {"egg","eggs","eggbase","eggshell"}
+
+local function nameHasEgg(n)
+    n = (n or ""):lower()
+    for _,k in ipairs(EGG_KEYWORDS) do
+        if n:find(k) then return true end
+    end
+    return false
+end
+
+local function isPlayerOrNPC(obj)
+    for _,pl in ipairs(Players:GetPlayers()) do
+        if pl.Character == obj then return true end
+    end
+    if obj:IsA("Model") and obj:FindFirstChildOfClass("Humanoid") then return true end
+    return false
+end
+
+local function isOnPlot(obj)
+    local par = obj.Parent
+    local depth = 0
+    while par and par ~= workspace and depth < 5 do
+        local n = par.Name:lower()
+        if n == "plots" or n:find("plot") or n:find("ranch") then return true end
+        par = par.Parent
+        depth = depth + 1
+    end
+    return false
+end
+
+local function collectEggs()
+    local out, seen = {}, {}
+    local function add(o)
+        if o and not seen[o] then seen[o]=true; table.insert(out, o) end
+    end
+
+    local re = workspace:FindFirstChild("RenderedEggs")
+    if re then
+        for _,v in ipairs(re:GetChildren()) do
+            if not isOnPlot(v) then add(v) end
+        end
+    end
+
+    local ef = workspace:FindFirstChild("Eggs")
+    if ef then
+        for _,v in ipairs(ef:GetChildren()) do
+            if not isOnPlot(v) then add(v) end
+        end
+    end
+
+    for _,cont in ipairs(workspace:GetChildren()) do
+        if cont:IsA("Folder") or cont:IsA("Model") then
+            local n = cont.Name:lower()
+            if n:find("egg") or n:find("spawn") or n:find("map") then
+                for _,v in ipairs(cont:GetChildren()) do
+                    if not isOnPlot(v) and not isPlayerOrNPC(v) then add(v) end
+                end
+            end
+        end
+    end
+
+    for _,v in ipairs(workspace:GetChildren()) do
+        if not seen[v] and (v:IsA("BasePart") or v:IsA("Model")) then
+            if nameHasEgg(v.Name) and not isOnPlot(v) and not isPlayerOrNPC(v) then
+                add(v)
+            end
+        end
+    end
+
+    return out
+end
+
+-- ============ LOW-LAG ESP CACHE ============
+local espCache = {}
+
+local function buildESP(part, color)
+    local hl = Instance.new("Highlight")
+    hl.Adornee = part
+    hl.FillColor = color
+    hl.FillTransparency = 0.75
+    hl.OutlineTransparency = 0.4
+    hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    hl.Parent = espEggFolder
+
+    local bb = Instance.new("BillboardGui")
+    bb.Adornee = part
+    bb.Size = UDim2.new(0, 140, 0, 50)
+    bb.StudsOffset = Vector3.new(0, 3, 0)
+    bb.AlwaysOnTop = true
+    bb.LightInfluence = 0
+    bb.MaxDistance = 100000
+    bb.Parent = espEggFolder
+
+    local nameL = Instance.new("TextLabel", bb)
+    nameL.Size = UDim2.new(1, 0, 0.34, 0)
+    nameL.BackgroundTransparency = 1
+    nameL.TextColor3 = Color3.new(1,1,1)
+    nameL.TextStrokeTransparency = 0.4
+    nameL.TextStrokeColor3 = Color3.new(0,0,0)
+    nameL.Font = Enum.Font.GothamBold
+    nameL.TextSize = 12
+
+    local valL = Instance.new("TextLabel", bb)
+    valL.Size = UDim2.new(1, 0, 0.33, 0)
+    valL.Position = UDim2.new(0, 0, 0.33, 0)
+    valL.BackgroundTransparency = 1
+    valL.TextColor3 = Color3.fromRGB(140,255,140)
+    valL.TextStrokeTransparency = 0.4
+    valL.Font = Enum.Font.Code
+    valL.TextSize = 11
+
+    local rarL = Instance.new("TextLabel", bb)
+    rarL.Size = UDim2.new(1, 0, 0.33, 0)
+    rarL.Position = UDim2.new(0, 0, 0.66, 0)
+    rarL.BackgroundTransparency = 1
+    rarL.TextColor3 = color
+    rarL.TextStrokeTransparency = 0.4
+    rarL.Font = Enum.Font.GothamBold
+    rarL.TextSize = 11
+
+    return {hl=hl, bb=bb, nameL=nameL, valL=valL, rarL=rarL, lastText=nil, lastRar=nil, lastColor=nil}
+end
+
+local function clearAllESP()
+    for part, data in pairs(espCache) do
+        if data.hl then data.hl:Destroy() end
+        if data.bb then data.bb:Destroy() end
+    end
+    espCache = {}
+end
+
+-- ============ ESP LOOP ============
+task.spawn(function()
+    while gui.Parent do
+        if espEggOn then
+            local liveParts = {}
+            local eggs = collectEggs()
+
+            for _,egg in ipairs(eggs) do
+                local part = egg:IsA("BasePart") and egg or egg:FindFirstChildWhichIsA("BasePart", true)
+                if part and part.Parent then
+                    liveParts[part] = true
+                    local luckText = readEggLuck(egg)
+                    local rarityText = readEggRarity(egg)
+                    local color = rarityColor(rarityText)
+                    local luckStr = "🍀 "..luckText
+                    local rarStr = "⭐ "..rarityText
+
+                    local c = espCache[part]
+                    if not c then
+                        c = buildESP(part, color)
+                        c.nameL.Text = "🥚 "..egg.Name
+                        c.valL.Text = luckStr
+                        c.rarL.Text = rarStr
+                        c.rarL.TextColor3 = color
+                        c.lastText = luckStr
+                        c.lastRar = rarityText
+                        c.lastColor = color
+                        espCache[part] = c
+                    else
+                        if c.lastText ~= luckStr then
+                            c.valL.Text = luckStr
+                            c.lastText = luckStr
+                        end
+                        if c.lastRar ~= rarityText then
+                            c.rarL.Text = rarStr
+                            c.rarL.TextColor3 = color
+                            c.lastRar = rarityText
+                        end
+                        if c.lastColor ~= color then
+                            c.hl.FillColor = color
+                            c.lastColor = color
+                        end
+                    end
+                end
+            end
+
+            for part, data in pairs(espCache) do
+                if not liveParts[part] or not part.Parent then
+                    if data.hl then data.hl:Destroy() end
+                    if data.bb then data.bb:Destroy() end
+                    espCache[part] = nil
+                end
+            end
+
+            for e,_ in pairs(rarityCache) do
+                if not e.Parent then rarityCache[e] = nil end
+            end
+        else
+            if next(espCache) then clearAllESP() end
+        end
+
+        task.wait(2)
+    end
+end)
+
+-- ============ SUPER SMOOTH STEAL ============
+local function superPickup(egg, prompt)
+    local char = lp.Character
+    if not char then return false end
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return false end
+    local pos = getPos(egg)
+    if not pos then return false end
+
+    local toEgg = TweenService:Create(hrp,
+        TweenInfo.new(0.05, Enum.EasingStyle.Sine, Enum.EasingDirection.Out),
+        {CFrame = CFrame.new(pos + Vector3.new(0, 1.5, 0))})
+    toEgg:Play()
+    toEgg.Completed:Wait()
+
+    if not egg.Parent or not prompt.Parent then return false end
+
+    local prompts = {prompt}
+    for _,d in ipairs(egg:GetDescendants()) do
+        if d:IsA("ProximityPrompt") and d ~= prompt then table.insert(prompts, d) end
+    end
+    for pass = 1, 8 do
+        for _,p in ipairs(prompts) do
+            if p and p.Parent then
+                p.HoldDuration = 0
+                p.MaxActivationDistance = math.huge
+                p.Enabled = true
+                pcall(fireproximityprompt, p)
+            end
+        end
+        task.wait(0.012)
+    end
+
+    if egg:IsA("BasePart") then
+        pcall(firetouchinterest, hrp, egg, 0)
+        pcall(firetouchinterest, hrp, egg, 1)
+    elseif egg:IsA("Model") then
+        for _,part in ipairs(egg:GetDescendants()) do
+            if part:IsA("BasePart") then
+                pcall(firetouchinterest, hrp, part, 0)
+                pcall(firetouchinterest, hrp, part, 1)
+            end
+        end
+    end
+
+    if ranchPos then
+        local back = TweenService:Create(hrp,
+            TweenInfo.new(0.05, Enum.EasingStyle.Sine, Enum.EasingDirection.Out),
+            {CFrame = ranchPos})
+        back:Play()
+        back.Completed:Wait()
+    end
     return true
 end
 
-local function stealEgg(entry)
-    if stealing or not entry or not entry.model or not entry.model.Parent then return end
-    local part = getTargetPart(entry)
-    if not part or not part.Parent then return end
-    stealing = true
-
-    -- Ultra-fast TP on top of egg
-    if not tp(CFrame.new(part.Position + Vector3.new(0, 2.8, 0))) then
-        stealing = false
-        return
-    end
-
-    local prompt = entry.prompt
-    if prompt and prompt.Parent then
-        -- Instant Proximity upgrade (maxed for speed)
-        pcall(function()
-            if prompt:IsA("ProximityPrompt") then
-                prompt.HoldDuration = 0
-                prompt.MaxActivationDistance = 999
-                prompt.RequiresLineOfSight = false
-                prompt.Enabled = true
-            end
-        end)
-        -- Fire as fast as possible (no artificial waits between fires)
-        for _ = 1, 24 do
-            pcall(function()
-                if prompt:IsA("ProximityPrompt") and fireproximityprompt then
-                    fireproximityprompt(prompt, 1) -- 1 = instant
-                elseif prompt:IsA("ClickDetector") and fireclickdetector then
-                    fireclickdetector(prompt)
-                end
-            end)
-            task.wait(0.008) -- extremely tight loop
-        end
-    end
-
-    -- Instant return to base
-    local b = findBase()
-    if b then
-        tp(b)
-    elseif returnCFrame then
-        tp(returnCFrame)
-    end
-    stealing = false
-    lastScan = 0 -- force immediate next-best rarity scan
-end
-
--- ===================== MISC =====================
-UIS.JumpRequest:Connect(function()
-    if not infJump then return end
-    local h = getHum()
-    if h and h:GetState() ~= Enum.HumanoidStateType.Jumping then
-        h:ChangeState(Enum.HumanoidStateType.Jumping)
-    end
-end)
-
-RunService.Stepped:Connect(function()
-    if noClip then
-        local c = LocalPlayer.Character
-        if c then
-            for _, p in ipairs(c:GetDescendants()) do
-                if p:IsA("BasePart") then p.CanCollide = false end
-            end
-        end
-    end
-    if speedBoost then
-        local h = getHum()
-        if h then h.WalkSpeed = speedValue end
-    end
-end)
-
--- ===================== UI =====================
-local function getParent()
-    local ok, ui = pcall(function() return gethui and gethui() end)
-    if ok and ui then return ui end
-    local ok2, core = pcall(function() return game:GetService("CoreGui") end)
-    if ok2 and core then return core end
-    return LocalPlayer:WaitForChild("PlayerGui")
-end
-
-pcall(function()
-    for _, c in ipairs(getParent():GetChildren()) do
-        if c.Name == "MilkweedHub" then c:Destroy() end
-    end
-end)
-
-local gui = Instance.new("ScreenGui")
-gui.Name = "MilkweedHub"
-gui.ResetOnSpawn = false
-gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-gui.Parent = getParent()
-
-local main = Instance.new("Frame")
-main.Name = "Main"
-main.Size = UDim2.new(0, 0, 0, 0) -- start collapsed for open animation
-main.Position = UDim2.new(0, 16, 0.5, 0)
-main.BackgroundColor3 = Color3.fromRGB(16, 16, 22)
-main.BorderSizePixel = 0
-main.Active = true
-main.ClipsDescendants = true
-main.Parent = gui
-Instance.new("UICorner", main).CornerRadius = UDim.new(0, 12)
-do
-    local s = Instance.new("UIStroke")
-    s.Color = Color3.fromRGB(38, 38, 52)
-    s.Thickness = 1.2
-    s.Parent = main
-end
-
--- Opening animation
-task.defer(function()
-    TweenService:Create(main, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-        Size = UDim2.new(0, 220, 0, 340),
-        Position = UDim2.new(0, 16, 0.5, -170)
-    }):Play()
-end)
-
-local header = Instance.new("Frame")
-header.Size = UDim2.new(1, 0, 0, 38)
-header.BackgroundColor3 = Color3.fromRGB(22, 22, 30)
-header.BorderSizePixel = 0
-header.Parent = main
-Instance.new("UICorner", header).CornerRadius = UDim.new(0, 12)
-do
-    local fix = Instance.new("Frame")
-    fix.Size = UDim2.new(1, 0, 0, 14)
-    fix.Position = UDim2.new(0, 0, 1, -14)
-    fix.BackgroundColor3 = Color3.fromRGB(22, 22, 30)
-    fix.BorderSizePixel = 0
-    fix.Parent = header
-end
-
-local function lbl(parent, text, font, sz, color, x, y, ws, h, xa)
-    local l = Instance.new("TextLabel")
-    l.Size = UDim2.new(ws, 0, 0, h)
-    l.Position = UDim2.new(0, x, 0, y)
-    l.BackgroundTransparency = 1
-    l.Text = text
-    l.Font = font
-    l.TextSize = sz
-    l.TextColor3 = color
-    l.TextXAlignment = xa or Enum.TextXAlignment.Left
-    l.Parent = parent
-    return l
-end
-
-lbl(header, "Milkweed Hub", Enum.Font.GothamBold, 13, Color3.fromRGB(240, 240, 245), 10, 5, 0.65, 16)
-lbl(header, "v4.1", Enum.Font.Gotham, 9, Color3.fromRGB(75, 85, 105), 10, 21, 0.5, 11)
-
-local function hBtn(txt, xOff, bg)
-    local b = Instance.new("TextButton")
-    b.Size = UDim2.new(0, 22, 0, 22)
-    b.Position = UDim2.new(1, xOff, 0.5, -11)
-    b.BackgroundColor3 = bg
-    b.Text = txt
-    b.TextColor3 = Color3.fromRGB(255, 255, 255)
-    b.Font = Enum.Font.GothamBold
-    b.TextSize = 14
-    b.Parent = header
-    Instance.new("UICorner", b).CornerRadius = UDim.new(0, 6)
-    return b
-end
-local minimizeBtn = hBtn("–", -52, Color3.fromRGB(40, 40, 55))
-local closeBtn = hBtn("×", -26, Color3.fromRGB(170, 45, 55))
-
-local tabBar = Instance.new("Frame")
-tabBar.Size = UDim2.new(1, -16, 0, 26)
-tabBar.Position = UDim2.new(0, 8, 0, 42)
-tabBar.BackgroundColor3 = Color3.fromRGB(22, 22, 30)
-tabBar.BorderSizePixel = 0
-tabBar.Parent = main
-Instance.new("UICorner", tabBar).CornerRadius = UDim.new(0, 8)
-
-local function mkTab(txt, xs, xo)
-    local b = Instance.new("TextButton")
-    b.Size = UDim2.new(1/3, -3, 1, -6)
-    b.Position = UDim2.new(xs, xo, 0, 3)
-    b.BackgroundColor3 = Color3.fromRGB(32, 32, 44)
-    b.Text = txt
-    b.TextColor3 = Color3.fromRGB(150, 150, 165)
-    b.Font = Enum.Font.GothamBold
-    b.TextSize = 10
-    b.BorderSizePixel = 0
-    b.Parent = tabBar
-    Instance.new("UICorner", b).CornerRadius = UDim.new(0, 6)
-    return b
-end
-local stealTabBtn = mkTab("⚡ Steal", 0, 3)
-local rarTabBtn = mkTab("💎 Rarity", 1/3, 0)
-local miscTabBtn = mkTab("🎮 Misc", 2/3, -3)
-
-local function mkPanel()
-    local f = Instance.new("Frame")
-    f.Size = UDim2.new(1, -16, 1, -78)
-    f.Position = UDim2.new(0, 8, 0, 72)
-    f.BackgroundTransparency = 1
-    f.Visible = false
-    f.Parent = main
-    return f
-end
-local stealPanel = mkPanel()
-local rarPanel = mkPanel()
-local miscPanel = mkPanel()
-
-local TC = { steal = Color3.fromRGB(0, 140, 220), rarity = Color3.fromRGB(200, 160, 30), misc = Color3.fromRGB(110, 60, 200) }
-local activeTab = ""
-local function switchTab(tab)
-    activeTab = tab
-    stealPanel.Visible = tab == "steal"
-    rarPanel.Visible = tab == "rarity"
-    miscPanel.Visible = tab == "misc"
-    for id, btn in pairs({ steal = stealTabBtn, rarity = rarTabBtn, misc = miscTabBtn }) do
-        if id == tab then
-            TweenService:Create(btn, TweenInfo.new(0.12), { BackgroundColor3 = TC[id], TextColor3 = Color3.fromRGB(255, 255, 255) }):Play()
-        else
-            TweenService:Create(btn, TweenInfo.new(0.12), { BackgroundColor3 = Color3.fromRGB(32, 32, 44), TextColor3 = Color3.fromRGB(150, 150, 165) }):Play()
-        end
-    end
-end
-stealTabBtn.MouseButton1Click:Connect(function() switchTab("steal") end)
-rarTabBtn.MouseButton1Click:Connect(function() switchTab("rarity") end)
-miscTabBtn.MouseButton1Click:Connect(function() switchTab("misc") end)
-
-local function setToggle(tgl, knob, iF, state, col)
-    if state then
-        TweenService:Create(tgl, TweenInfo.new(0.18), { BackgroundColor3 = col }):Play()
-        TweenService:Create(knob, TweenInfo.new(0.18), { Position = UDim2.new(1, -16, 0.5, -7), BackgroundColor3 = Color3.fromRGB(255, 255, 255) }):Play()
-        TweenService:Create(iF, TweenInfo.new(0.18), { BackgroundColor3 = col }):Play()
-    else
-        TweenService:Create(tgl, TweenInfo.new(0.18), { BackgroundColor3 = Color3.fromRGB(40, 40, 55) }):Play()
-        TweenService:Create(knob, TweenInfo.new(0.18), { Position = UDim2.new(0, 3, 0.5, -7), BackgroundColor3 = Color3.fromRGB(160, 160, 175) }):Play()
-        TweenService:Create(iF, TweenInfo.new(0.18), { BackgroundColor3 = Color3.fromRGB(36, 36, 50) }):Play()
-    end
-end
-
-local function buildToggle(parent, yPos, emoji, title, desc)
-    local card = Instance.new("Frame")
-    card.Size = UDim2.new(1, 0, 0, 42)
-    card.Position = UDim2.new(0, 0, 0, yPos)
-    card.BackgroundColor3 = Color3.fromRGB(24, 24, 34)
-    card.BorderSizePixel = 0
-    card.Parent = parent
-    Instance.new("UICorner", card).CornerRadius = UDim.new(0, 10)
-    local iF = Instance.new("Frame")
-    iF.Size = UDim2.new(0, 28, 0, 28)
-    iF.Position = UDim2.new(0, 8, 0.5, -14)
-    iF.BackgroundColor3 = Color3.fromRGB(36, 36, 50)
-    iF.BorderSizePixel = 0
-    iF.Parent = card
-    Instance.new("UICorner", iF).CornerRadius = UDim.new(0, 7)
-    do
-        local il = Instance.new("TextLabel")
-        il.Size = UDim2.new(1, 0, 1, 0)
-        il.BackgroundTransparency = 1
-        il.Text = emoji
-        il.TextSize = 13
-        il.Parent = iF
-    end
-    lbl(card, title, Enum.Font.GothamBold, 11, Color3.fromRGB(235, 235, 245), 44, 7, 0.65, 14)
-    lbl(card, desc, Enum.Font.Gotham, 10, Color3.fromRGB(110, 120, 140), 44, 22, 0.65, 12)
-    local tgl = Instance.new("TextButton")
-    tgl.Size = UDim2.new(0, 36, 0, 18)
-    tgl.Position = UDim2.new(1, -44, 0.5, -9)
-    tgl.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
-    tgl.Text = ""
-    tgl.Parent = card
-    Instance.new("UICorner", tgl).CornerRadius = UDim.new(1, 0)
-    local knob = Instance.new("Frame")
-    knob.Size = UDim2.new(0, 14, 0, 14)
-    knob.Position = UDim2.new(0, 3, 0.5, -7)
-    knob.BackgroundColor3 = Color3.fromRGB(160, 160, 175)
-    knob.BorderSizePixel = 0
-    knob.Parent = tgl
-    Instance.new("UICorner", knob).CornerRadius = UDim.new(1, 0)
-    return tgl, knob, iF
-end
-
--- Steal panel
-local sCard = Instance.new("Frame")
-sCard.Size = UDim2.new(1, 0, 0, 58)
-sCard.BackgroundColor3 = Color3.fromRGB(24, 24, 34)
-sCard.BorderSizePixel = 0
-sCard.Parent = stealPanel
-Instance.new("UICorner", sCard).CornerRadius = UDim.new(0, 10)
-local sIF = Instance.new("Frame")
-sIF.Size = UDim2.new(0, 38, 0, 38)
-sIF.Position = UDim2.new(0, 10, 0.5, -19)
-sIF.BackgroundColor3 = Color3.fromRGB(255, 175, 35)
-sIF.BorderSizePixel = 0
-sIF.Parent = sCard
-Instance.new("UICorner", sIF).CornerRadius = UDim.new(0, 9)
-do
-    local e = Instance.new("TextLabel")
-    e.Size = UDim2.new(1, 0, 1, 0)
-    e.BackgroundTransparency = 1
-    e.Text = "🥚"
-    e.TextSize = 18
-    e.Parent = sIF
-end
-local eggName = lbl(sCard, "No egg detected", Enum.Font.GothamBold, 11, Color3.fromRGB(230, 230, 240), 56, 8, 0.78, 14)
-eggName.TextTruncate = Enum.TextTruncate.AtEnd
-local eggVal = lbl(sCard, "Luck —", Enum.Font.GothamBold, 11, Color3.fromRGB(80, 215, 135), 56, 24, 0.78, 13)
-local eggRar = lbl(sCard, "—", Enum.Font.GothamBold, 10, Color3.fromRGB(150, 150, 165), 56, 39, 0.78, 12)
-
-local stealTgl, stealKnob, stealIF = buildToggle(stealPanel, 66, "⚡", "Auto Steal", "TP → your plot")
-local espTgl, espKnob, espIF = buildToggle(stealPanel, 114, "👁", "Egg ESP", "Highlight targets")
-
-do
-    local f = lbl(stealPanel, "Milkweed Hub  •  Credits to UncleDags", Enum.Font.Gotham, 9, Color3.fromRGB(70, 80, 100), 0, 0, 1, 12, Enum.TextXAlignment.Center)
-    f.Position = UDim2.new(0, 0, 1, -14)
-end
-
--- Rarity panel
-local rCard = Instance.new("Frame")
-rCard.Size = UDim2.new(1, 0, 0, 66)
-rCard.BackgroundColor3 = Color3.fromRGB(24, 24, 34)
-rCard.BorderSizePixel = 0
-rCard.Parent = rarPanel
-Instance.new("UICorner", rCard).CornerRadius = UDim.new(0, 10)
-local rStroke = Instance.new("UIStroke")
-rStroke.Color = Color3.fromRGB(120, 220, 255)
-rStroke.Thickness = 1.8
-rStroke.Parent = rCard
-local rIF = Instance.new("Frame")
-rIF.Size = UDim2.new(0, 44, 0, 44)
-rIF.Position = UDim2.new(0, 10, 0.5, -22)
-rIF.BackgroundColor3 = Color3.fromRGB(120, 220, 255)
-rIF.BorderSizePixel = 0
-rIF.Parent = rCard
-Instance.new("UICorner", rIF).CornerRadius = UDim.new(0, 10)
-local rEmoji = Instance.new("TextLabel")
-rEmoji.Size = UDim2.new(1, 0, 1, 0)
-rEmoji.BackgroundTransparency = 1
-rEmoji.Text = "🩵"
-rEmoji.TextSize = 20
-rEmoji.Parent = rIF
-local rName = lbl(rCard, "No eggs visible", Enum.Font.GothamBold, 11, Color3.fromRGB(120, 220, 255), 62, 6, 0.74, 14)
-rName.TextTruncate = Enum.TextTruncate.AtEnd
-local rTier = lbl(rCard, "—", Enum.Font.GothamBold, 17, Color3.fromRGB(120, 220, 255), 62, 20, 0.74, 20)
-local rVal = lbl(rCard, "Luck —", Enum.Font.GothamBold, 10, Color3.fromRGB(80, 215, 135), 62, 46, 0.74, 13)
-
-do
-    local d = Instance.new("TextLabel")
-    d.Size = UDim2.new(1, 0, 0, 14)
-    d.Position = UDim2.new(0, 0, 0, 72)
-    d.BackgroundTransparency = 1
-    d.Text = "TIERS  ↑  LOW → HIGH  (Ethereal #1)"
-    d.TextColor3 = Color3.fromRGB(60, 70, 90)
-    d.Font = Enum.Font.GothamBold
-    d.TextSize = 9
-    d.TextXAlignment = Enum.TextXAlignment.Center
-    d.Parent = rarPanel
-end
-
-local scroll = Instance.new("ScrollingFrame")
-scroll.Size = UDim2.new(1, 0, 1, -94)
-scroll.Position = UDim2.new(0, 0, 0, 90)
-scroll.BackgroundTransparency = 1
-scroll.ScrollBarThickness = 2
-scroll.ScrollBarImageColor3 = Color3.fromRGB(55, 60, 80)
-scroll.CanvasSize = UDim2.new(0, 0, 0, #TIERS_ASC * 25)
-scroll.Parent = rarPanel
-
-local ERAR_EMO = { [8] = "🩵", [7] = "👑", [6] = "🔴", [5] = "🟠", [4] = "🟣", [3] = "🔵", [2] = "🟢", [1] = "⬜" }
-for i, t in ipairs(TIERS_ASC) do
-    local row = Instance.new("Frame")
-    row.Size = UDim2.new(1, 0, 0, 22)
-    row.Position = UDim2.new(0, 0, 0, (i - 1) * 25)
-    row.BackgroundColor3 = Color3.fromRGB(22, 22, 32)
-    row.BorderSizePixel = 0
-    row.Parent = scroll
-    Instance.new("UICorner", row).CornerRadius = UDim.new(0, 7)
-    do
-        local bar = Instance.new("Frame")
-        bar.Size = UDim2.new(0, 3, 1, -6)
-        bar.Position = UDim2.new(0, 3, 0, 3)
-        bar.BackgroundColor3 = t.color
-        bar.BorderSizePixel = 0
-        bar.Parent = row
-        Instance.new("UICorner", bar).CornerRadius = UDim.new(1, 0)
-    end
-    do
-        local rn = Instance.new("TextLabel")
-        rn.Size = UDim2.new(0, 14, 1, 0)
-        rn.Position = UDim2.new(0, 9, 0, 0)
-        rn.BackgroundTransparency = 1
-        rn.Text = tostring(t.rank)
-        rn.TextColor3 = Color3.fromRGB(75, 85, 105)
-        rn.Font = Enum.Font.GothamBold
-        rn.TextSize = 9
-        rn.Parent = row
-    end
-    do
-        local em = Instance.new("TextLabel")
-        em.Size = UDim2.new(0, 18, 1, 0)
-        em.Position = UDim2.new(0, 24, 0, 0)
-        em.BackgroundTransparency = 1
-        em.Text = ERAR_EMO[t.rank] or "•"
-        em.TextSize = 11
-        em.Parent = row
-    end
-    do
-        local nl = Instance.new("TextLabel")
-        nl.Size = UDim2.new(1, -90, 1, 0)
-        nl.Position = UDim2.new(0, 44, 0, 0)
-        nl.BackgroundTransparency = 1
-        nl.Text = t.label
-        nl.TextColor3 = t.color
-        nl.Font = Enum.Font.GothamBold
-        nl.TextSize = 11
-        nl.TextXAlignment = Enum.TextXAlignment.Left
-        nl.Parent = row
-    end
-    do
-        local vl = Instance.new("TextLabel")
-        vl.Size = UDim2.new(0, 64, 1, 0)
-        vl.Position = UDim2.new(1, -66, 0, 0)
-        vl.BackgroundTransparency = 1
-        vl.Text = t.label
-        vl.TextColor3 = Color3.fromRGB(60, 70, 90)
-        vl.Font = Enum.Font.Gotham
-        vl.TextSize = 9
-        vl.TextXAlignment = Enum.TextXAlignment.Right
-        vl.Parent = row
-    end
-end
-
-do
-    local f = lbl(rarPanel, "Milkweed Hub  •  Credits to UncleDags", Enum.Font.Gotham, 9, Color3.fromRGB(70, 80, 100), 0, 0, 1, 12, Enum.TextXAlignment.Center)
-    f.Position = UDim2.new(0, 0, 1, -14)
-end
-
--- Misc panel
-local ijTgl, ijKnob, ijIF = buildToggle(miscPanel, 0, "🦘", "Infinite Jump", "Jump mid-air")
-local ncTgl, ncKnob, ncIF = buildToggle(miscPanel, 48, "👻", "NoClip", "Phase through walls")
-
-local spCard = Instance.new("Frame")
-spCard.Size = UDim2.new(1, 0, 0, 72)
-spCard.Position = UDim2.new(0, 0, 0, 96)
-spCard.BackgroundColor3 = Color3.fromRGB(24, 24, 34)
-spCard.BorderSizePixel = 0
-spCard.Parent = miscPanel
-Instance.new("UICorner", spCard).CornerRadius = UDim.new(0, 10)
-local spIF = Instance.new("Frame")
-spIF.Size = UDim2.new(0, 28, 0, 28)
-spIF.Position = UDim2.new(0, 8, 0, 8)
-spIF.BackgroundColor3 = Color3.fromRGB(36, 36, 50)
-spIF.BorderSizePixel = 0
-spIF.Parent = spCard
-Instance.new("UICorner", spIF).CornerRadius = UDim.new(0, 7)
-do
-    local il = Instance.new("TextLabel")
-    il.Size = UDim2.new(1, 0, 1, 0)
-    il.BackgroundTransparency = 1
-    il.Text = "💨"
-    il.TextSize = 13
-    il.Parent = spIF
-end
-lbl(spCard, "Speed Booster", Enum.Font.GothamBold, 11, Color3.fromRGB(235, 235, 245), 44, 8, 0.58, 14)
-local spValLbl = Instance.new("TextLabel")
-spValLbl.Size = UDim2.new(0, 40, 0, 14)
-spValLbl.Position = UDim2.new(1, -50, 0, 8)
-spValLbl.BackgroundTransparency = 1
-spValLbl.Text = "16"
-spValLbl.TextColor3 = Color3.fromRGB(80, 215, 135)
-spValLbl.Font = Enum.Font.GothamBold
-spValLbl.TextSize = 11
-spValLbl.TextXAlignment = Enum.TextXAlignment.Right
-spValLbl.Parent = spCard
-local spTgl = Instance.new("TextButton")
-spTgl.Size = UDim2.new(0, 36, 0, 18)
-spTgl.Position = UDim2.new(1, -44, 0, 30)
-spTgl.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
-spTgl.Text = ""
-spTgl.Parent = spCard
-Instance.new("UICorner", spTgl).CornerRadius = UDim.new(1, 0)
-local spKnob = Instance.new("Frame")
-spKnob.Size = UDim2.new(0, 14, 0, 14)
-spKnob.Position = UDim2.new(0, 3, 0.5, -7)
-spKnob.BackgroundColor3 = Color3.fromRGB(160, 160, 175)
-spKnob.BorderSizePixel = 0
-spKnob.Parent = spTgl
-Instance.new("UICorner", spKnob).CornerRadius = UDim.new(1, 0)
-local sTrack = Instance.new("Frame")
-sTrack.Size = UDim2.new(1, -20, 0, 8)
-sTrack.Position = UDim2.new(0, 10, 0, 54)
-sTrack.BackgroundColor3 = Color3.fromRGB(36, 36, 50)
-sTrack.BorderSizePixel = 0
-sTrack.Parent = spCard
-Instance.new("UICorner", sTrack).CornerRadius = UDim.new(1, 0)
-local sFill = Instance.new("Frame")
-sFill.Size = UDim2.new(0, 0, 1, 0)
-sFill.BackgroundColor3 = Color3.fromRGB(80, 200, 130)
-sFill.BorderSizePixel = 0
-sFill.Parent = sTrack
-Instance.new("UICorner", sFill).CornerRadius = UDim.new(1, 0)
-local sHandle = Instance.new("TextButton")
-sHandle.Size = UDim2.new(0, 16, 0, 16)
-sHandle.Position = UDim2.new(0, -8, 0.5, -8)
-sHandle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-sHandle.Text = ""
-sHandle.ZIndex = 3
-sHandle.Parent = sTrack
-Instance.new("UICorner", sHandle).CornerRadius = UDim.new(1, 0)
-
-local MIN_S, MAX_S = 1, 1000
-local function updSlider(v)
-    local pct = (v - MIN_S) / (MAX_S - MIN_S)
-    sFill.Size = UDim2.new(pct, 0, 1, 0)
-    sHandle.Position = UDim2.new(pct, -8, 0.5, -8)
-    spValLbl.Text = tostring(math.floor(v))
-end
-updSlider(speedValue)
-
-do
-    local f = lbl(miscPanel, "Milkweed Hub  •  Credits to UncleDags", Enum.Font.Gotham, 9, Color3.fromRGB(70, 80, 100), 0, 0, 1, 12, Enum.TextXAlignment.Center)
-    f.Position = UDim2.new(0, 0, 1, -14)
-end
-
--- ESP
-local function clearESP()
-    if espObjects.hl then pcall(function() espObjects.hl:Destroy() end) end
-    if espObjects.bb then pcall(function() espObjects.bb:Destroy() end) end
-    espObjects = {}
-end
-
-local function createESP(entry)
-    clearESP()
-    local part = getTargetPart(entry)
-    if not part then return end
-    local col = entry.rarityColor or Color3.fromRGB(0, 200, 255)
-    local hl = Instance.new("Highlight")
-    hl.Adornee = entry.model
-    hl.FillColor = col
-    hl.FillTransparency = 0.55
-    hl.OutlineColor = Color3.new(1, 1, 1)
-    hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-    hl.Parent = gui
-    local bb = Instance.new("BillboardGui")
-    bb.Adornee = part
-    bb.Size = UDim2.new(0, 130, 0, 46)
-    bb.StudsOffset = Vector3.new(0, 3, 0)
-    bb.AlwaysOnTop = true
-    bb.Parent = gui
-    local bg = Instance.new("Frame")
-    bg.Size = UDim2.new(1, 0, 1, 0)
-    bg.BackgroundColor3 = Color3.fromRGB(14, 14, 20)
-    bg.BackgroundTransparency = 0.1
-    bg.BorderSizePixel = 0
-    bg.Parent = bb
-    Instance.new("UICorner", bg).CornerRadius = UDim.new(0, 7)
-    do
-        local es = Instance.new("UIStroke")
-        es.Color = col
-        es.Thickness = 1.2
-        es.Parent = bg
-    end
-    lbl(bg, entry.model.Name, Enum.Font.GothamBold, 11, col, 5, 3, 0.9, 14)
-    lbl(bg, entry.rarityLabel or "?", Enum.Font.GothamBold, 10, col, 5, 19, 0.55, 13)
-    lbl(bg, "🍀 "..fmtLuck(entry.luck), Enum.Font.GothamBold, 10, Color3.fromRGB(80, 215, 135), 5, 32, 0.9, 12)
-    espObjects = { model = entry.model, hl = hl, bb = bb }
-end
-
--- Wiring
-stealTgl.MouseButton1Click:Connect(function()
-    autoSteal = not autoSteal
-    setToggle(stealTgl, stealKnob, stealIF, autoSteal, Color3.fromRGB(0, 160, 240))
-    if autoSteal then
-        local r = getRoot()
-        if r then returnCFrame = r.CFrame end
-    else
-        stealing = false
-        clearBeam()
-    end
-end)
-
-espTgl.MouseButton1Click:Connect(function()
-    espEnabled = not espEnabled
-    setToggle(espTgl, espKnob, espIF, espEnabled, Color3.fromRGB(120, 70, 240))
-    if not espEnabled then
-        clearESP()
-        clearBeam()
-    end
-end)
-
-ijTgl.MouseButton1Click:Connect(function()
-    infJump = not infJump
-    setToggle(ijTgl, ijKnob, ijIF, infJump, Color3.fromRGB(255, 160, 0))
-end)
-
-ncTgl.MouseButton1Click:Connect(function()
-    noClip = not noClip
-    setToggle(ncTgl, ncKnob, ncIF, noClip, Color3.fromRGB(190, 70, 240))
-    if not noClip then
-        local c = LocalPlayer.Character
-        if c then
-            for _, p in ipairs(c:GetDescendants()) do
-                if p:IsA("BasePart") then
-                    pcall(function() p.CanCollide = true end)
+-- ============ AUTO HATCH ============
+local hatchActive = false
+local function fireHatchPrompts()
+    local plots = workspace:FindFirstChild("Plots")
+    if not plots then return end
+    for _,p in ipairs(plots:GetChildren()) do
+        for _,d in ipairs(p:GetDescendants()) do
+            if d:IsA("ProximityPrompt") then
+                local a = (d.ActionText or ""):lower()
+                local o = (d.ObjectText or ""):lower()
+                local pn = (d.Parent and d.Parent.Name or ""):lower()
+                if a:find("hatch") or a:find("open") or o:find("hatch")
+                or o:find("egg") or pn:find("hatch") or pn:find("egg") then
+                    d.HoldDuration = 0
+                    d.MaxActivationDistance = math.huge
+                    pcall(fireproximityprompt, d)
                 end
             end
         end
     end
-end)
-
-spTgl.MouseButton1Click:Connect(function()
-    speedBoost = not speedBoost
-    setToggle(spTgl, spKnob, spIF, speedBoost, Color3.fromRGB(70, 195, 125))
-    local h = getHum()
-    if h then h.WalkSpeed = speedBoost and speedValue or baseWalkSpeed end
-end)
-
-local dragSlider = false
-sHandle.MouseButton1Down:Connect(function() dragSlider = true end)
-sHandle.InputBegan:Connect(function(i)
-    if i.UserInputType == Enum.UserInputType.Touch then dragSlider = true end
-end)
-
-local minimized = false
-minimizeBtn.MouseButton1Click:Connect(function()
-    minimized = not minimized
-    stealPanel.Visible = not minimized and activeTab == "steal"
-    rarPanel.Visible = not minimized and activeTab == "rarity"
-    miscPanel.Visible = not minimized and activeTab == "misc"
-    tabBar.Visible = not minimized
-    main.Size = minimized and UDim2.new(0, 220, 0, 38) or UDim2.new(0, 220, 0, 340)
-    minimizeBtn.Text = minimized and "+" or "–"
-end)
-
-local function doClose()
-    autoSteal, espEnabled, stealing, infJump, noClip, speedBoost = false, false, false, false, false, false
-    local h = getHum()
-    if h then h.WalkSpeed = baseWalkSpeed end
-    clearBeam()
-    clearESP()
-    -- Closing animation
-    local tw = TweenService:Create(main, TweenInfo.new(0.28, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
-        Size = UDim2.new(0, 0, 0, 0),
-        Position = UDim2.new(0, 16 + 110, 0.5, 0)
-    })
-    tw:Play()
-    tw.Completed:Connect(function()
-        gui:Destroy()
-    end)
+end
+local function hatchLoop()
+    while hatchActive and gui.Parent do
+        fireHatchPrompts()
+        task.wait(0.4)
+    end
 end
 
-closeBtn.MouseButton1Click:Connect(function()
-    -- Confirmation overlay
-    local overlay = Instance.new("Frame")
-    overlay.Name = "CloseConfirm"
-    overlay.Size = UDim2.new(1, 0, 1, 0)
-    overlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-    overlay.BackgroundTransparency = 0.45
-    overlay.ZIndex = 50
-    overlay.Parent = main
-
-    local box = Instance.new("Frame")
-    box.Size = UDim2.new(0, 180, 0, 110)
-    box.Position = UDim2.new(0.5, -90, 0.5, -55)
-    box.BackgroundColor3 = Color3.fromRGB(22, 22, 30)
-    box.BorderSizePixel = 0
-    box.ZIndex = 51
-    box.Parent = overlay
-    Instance.new("UICorner", box).CornerRadius = UDim.new(0, 10)
-    do
-        local s = Instance.new("UIStroke")
-        s.Color = Color3.fromRGB(50, 50, 70)
-        s.Thickness = 1.2
-        s.Parent = box
+-- ============ AUTO BUY HATCH LUCK ============
+local buyActive = false
+local function buyOnce()
+    local G = RS.Remotes and RS.Remotes:FindFirstChild("Game")
+    if not G then return end
+    local P = G:FindFirstChild("Plot")
+    if not P then return end
+    local up = P:FindFirstChild("Upgrades")
+    if up then pcall(function() up:FireServer() end) end
+end
+local function buyLoop()
+    while buyActive and gui.Parent do
+        buyOnce()
+        status.Text = "● 💰 Buying Hatch Luck..."
+        task.wait(0.15)
     end
+end
 
-    local title = Instance.new("TextLabel")
-    title.Size = UDim2.new(1, -16, 0, 36)
-    title.Position = UDim2.new(0, 8, 0, 10)
-    title.BackgroundTransparency = 1
-    title.Text = "Are you sure you want\nto close this?"
-    title.TextColor3 = Color3.fromRGB(230, 230, 240)
-    title.Font = Enum.Font.GothamBold
-    title.TextSize = 12
-    title.TextWrapped = true
-    title.ZIndex = 52
-    title.Parent = box
-
-    local function makeBtn(txt, x, bg)
-        local b = Instance.new("TextButton")
-        b.Size = UDim2.new(0, 70, 0, 28)
-        b.Position = UDim2.new(0, x, 1, -40)
-        b.BackgroundColor3 = bg
-        b.Text = txt
-        b.TextColor3 = Color3.fromRGB(255, 255, 255)
-        b.Font = Enum.Font.GothamBold
-        b.TextSize = 12
-        b.ZIndex = 52
-        b.Parent = box
-        Instance.new("UICorner", b).CornerRadius = UDim.new(0, 6)
-        return b
-    end
-
-    local yesBtn = makeBtn("Yes", 12, Color3.fromRGB(180, 50, 60))
-    local noBtn  = makeBtn("No",  98, Color3.fromRGB(40, 120, 70))
-
-    yesBtn.MouseButton1Click:Connect(function()
-        overlay:Destroy()
-        doClose()
-    end)
-    noBtn.MouseButton1Click:Connect(function()
-        overlay:Destroy()
-    end)
-end)
-
-local dragging, dragStart, startPos
-header.InputBegan:Connect(function(i)
-    if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
-        dragging = true
-        dragStart = i.Position
-        startPos = main.Position
-    end
-end)
-
-UIS.InputEnded:Connect(function(i)
-    if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
-        dragging = false
-        dragSlider = false
-    end
-end)
-
-UIS.InputChanged:Connect(function(i)
-    if dragSlider and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
-        local pct = math.clamp((i.Position.X - sTrack.AbsolutePosition.X) / sTrack.AbsoluteSize.X, 0, 1)
-        speedValue = math.floor(MIN_S + pct * (MAX_S - MIN_S))
-        updSlider(speedValue)
-        if speedBoost then
-            local h = getHum()
-            if h then h.WalkSpeed = speedValue end
+-- ============ LIVE EGG LIST ============
+local function getCurrentEggs()
+    local list = {}
+    for _,v in ipairs(collectEggs()) do
+        local p = v:FindFirstChildWhichIsA("ProximityPrompt", true)
+        if p and p.Enabled and p.Parent then
+            local luckText = readEggLuck(v)
+            local rarityText = readEggRarity(v)
+            table.insert(list, {
+                egg=v, prompt=p, name=v.Name,
+                luckText=luckText,
+                rarity=rarityText,
+                num=parseValue(luckText)
+            })
         end
     end
-    if dragging and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
-        local d = i.Position - dragStart
-        main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + d.X, startPos.Y.Scale, startPos.Y.Offset + d.Y)
-    end
-end)
-
-LocalPlayer.CharacterAdded:Connect(function()
-    task.wait(0.5)
-    stealing = false
-    if autoSteal then
-        local r = getRoot()
-        if r then returnCFrame = r.CFrame end
-    end
-    if speedBoost then
-        local h = getHum()
-        if h then h.WalkSpeed = speedValue end
-    end
-end)
-
--- ===================== MAIN LOOP — FASTER SCAN + rarity-first Auto Steal =====================
-switchTab("steal")
+    table.sort(list, function(a,b) return a.num > b.num end)
+    return list
+end
 
 task.spawn(function()
-    while gui and gui.Parent do
-        task.wait(0.15)  -- much faster loop
-        if os.clock() - lastScan > 0.25 then  -- scan every ~0.25s instead of 1.2s
-            local ok, bv, br = pcall(scanEggs)
-            if ok then
-                eggByVal, eggByRar = bv, br
-            end
-            lastScan = os.clock()
-        end
-
-        -- Highest rarity + luck first (Ethereal top)
-        local target = eggByRar[1] or eggByVal[1]
-
-        if target and target.model and target.model.Parent and target.prompt and target.prompt.Parent then
-            local col = target.rarityColor
-            eggName.Text = target.name or target.model.Name
-            eggName.TextColor3 = col
-            eggVal.Text = "🍀 "..fmtLuck(target.luck)
-            eggRar.Text = target.rarityLabel
-            eggRar.TextColor3 = col
-            sIF.BackgroundColor3 = col
-            if autoSteal or espEnabled then
-                local p = getTargetPart(target)
-                if p then makeBeam(p) end
-            end
-            if espEnabled and (not espObjects.model or espObjects.model ~= target.model) then
-                createESP(target)
-            end
-            if autoSteal and not stealing then
-                task.spawn(function()
-                    stealEgg(target)
-                end)
-                task.wait(0.22)  -- ultra-short cooldown after steal
-            end
+    while gui.Parent do
+        local list = getCurrentEggs()
+        if #list == 0 then eggList.Text = "○ no eggs spawning"
         else
-            eggName.Text = "No egg detected"
-            eggName.TextColor3 = Color3.fromRGB(150, 150, 165)
-            eggVal.Text = "Luck —"
-            eggRar.Text = "—"
-            eggRar.TextColor3 = Color3.fromRGB(100, 110, 130)
-            sIF.BackgroundColor3 = Color3.fromRGB(55, 55, 70)
-            clearBeam()
-            if espEnabled then clearESP() end
+            local txt = ""
+            for i = 1, math.min(3, #list) do
+                local e = list[i]
+                local mark = e.num >= MIN_VALUE and "★" or "·"
+                txt = txt .. mark .. " " .. e.name .. " — 🍀 " .. e.luckText .. " — ⭐ " .. e.rarity .. "\n"
+            end
+            eggList.Text = txt
         end
-
-        local br = eggByRar[1]
-        if br and br.model and br.model.Parent then
-            local col = br.rarityColor
-            rName.Text = br.name or br.model.Name
-            rName.TextColor3 = col
-            rTier.Text = br.rarityLabel
-            rTier.TextColor3 = col
-            rVal.Text = "🍀 "..fmtLuck(br.luck)
-            rIF.BackgroundColor3 = col
-            rStroke.Color = col
-            rEmoji.Text = ERAR_EMO[br.rarityRank] or "🥚"
-        else
-            rName.Text = "No eggs visible"
-            rName.TextColor3 = Color3.fromRGB(150, 150, 165)
-            rTier.Text = "—"
-            rTier.TextColor3 = Color3.fromRGB(100, 110, 130)
-            rVal.Text = "Luck —"
-            rIF.BackgroundColor3 = Color3.fromRGB(55, 55, 70)
-            rStroke.Color = Color3.fromRGB(55, 55, 70)
-            rEmoji.Text = "🥚"
-        end
+        task.wait(2)
     end
 end)
 
-print("[MilkweedHub v4.1] Credits to UncleDags | Open/Close animations | Close confirmation (Yes/No) | Intelligent egg DB | Ethereal #1 | Ultra-fast steal")
+-- ============ STEAL CYCLE ============
+local active, busy = false, false
+local function runCycle()
+    if not active or busy or not ranchPos then return end
+    busy = true
+    local list = getCurrentEggs()
+    local best = nil
+    for _,e in ipairs(list) do if e.num >= MIN_VALUE then best = e break end end
+    if best then
+        task.wait(0.01)
+        local l2 = getCurrentEggs()
+        for _,e in ipairs(l2) do
+            if e.num >= MIN_VALUE and e.num > best.num then best = e break end
+        end
+        local ok = superPickup(best.egg, best.prompt)
+        status.Text = ok and ("● 🏆 "..best.name.." | 🍀 "..best.luckText.." | ⭐ "..best.rarity) or "● retry"
+        task.wait(0.01)
+    else
+        status.Text = "● Waiting for 1B+ egg..."
+        task.wait(0.15)
+    end
+    busy = false
+end
+
+-- ============ BUTTON HANDLERS ============
+local loopConn = nil
+btn.MouseButton1Click:Connect(function()
+    if not ranchPos then status.Text = "● Plot not ready..." return end
+    active = not active
+    if active then
+        btn.Text = "⚡ STEAL 1B+: ON"
+        TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(20,120,40)}):Play()
+        TweenService:Create(btnStroke, TweenInfo.new(0.2), {Color = Color3.fromRGB(80,255,120)}):Play()
+        loopConn = RunService.Heartbeat:Connect(function() if active then runCycle() end end)
+    else
+        btn.Text = "⚡ STEAL 1B+"
+        TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(15, 55, 25)}):Play()
+        TweenService:Create(btnStroke, TweenInfo.new(0.2), {Color = Color3.fromRGB(60, 190, 90)}):Play()
+        if loopConn then loopConn:Disconnect() loopConn = nil end
+        busy = false
+        status.Text = "● Steal off"
+    end
+end)
+
+hatchBtn.MouseButton1Click:Connect(function()
+    hatchActive = not hatchActive
+    hatchBtn.Text = hatchActive and "🥚 AUTO HATCH: ON" or "🥚 AUTO HATCH"
+    TweenService:Create(hatchBtn, TweenInfo.new(0.2), {BackgroundColor3 = hatchActive and Color3.fromRGB(20,120,40) or Color3.fromRGB(20,60,80)}):Play()
+    TweenService:Create(hatchStroke, TweenInfo.new(0.2), {Color = hatchActive and Color3.fromRGB(80,255,120) or Color3.fromRGB(60,200,220)}):Play()
+    if hatchActive then task.spawn(hatchLoop) end
+end)
+
+buyBtn.MouseButton1Click:Connect(function()
+    buyActive = not buyActive
+    buyBtn.Text = buyActive and "💰 BUY: ON (FAST)" or "💰 AUTO BUY HATCH LUCK"
+    TweenService:Create(buyBtn, TweenInfo.new(0.2), {BackgroundColor3 = buyActive and Color3.fromRGB(20,120,40) or Color3.fromRGB(80,60,10)}):Play()
+    TweenService:Create(buyStroke, TweenInfo.new(0.2), {Color = buyActive and Color3.fromRGB(80,255,120) or Color3.fromRGB(255,200,60)}):Play()
+    if buyActive then task.spawn(buyLoop) end
+end)
+
+espEggBtn.MouseButton1Click:Connect(function()
+    espEggOn = not espEggOn
+    espEggBtn.Text = espEggOn and "👁 EGG ESP: ON" or "👁 EGG ESP: OFF"
+    TweenService:Create(espEggBtn, TweenInfo.new(0.2), {BackgroundColor3 = espEggOn and Color3.fromRGB(20,120,40) or Color3.fromRGB(60,30,30)}):Play()
+    if not espEggOn then clearAllESP() end
+end)
+
+TweenService:Create(main, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+    Size = UDim2.new(0, 260, 0, 330)
+}):Play()
+
+print("[Milkweed Hub] Loaded ✦ v14 — cinematic load")
